@@ -5,11 +5,14 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 
-from app import app, db
-from flask import render_template, request, jsonify, send_file
+from app import app,db
+from flask import render_template, request, jsonify, url_for, send_from_directory
 import os
+from app.models import Movie
 from app.forms import MovieForm
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import generate_csrf
+
 
 ###
 # Routing for your application.
@@ -19,36 +22,59 @@ from werkzeug.utils import secure_filename
 def index():
     return jsonify(message="This is the beginning of our API")
 
-@app.route('/api/v1/movies', methods = ["POST"])
+@app.route('/api/v1/movies', methods=['POST'])
 def movies():
     form = MovieForm()
-     
+    result = ''
+    
     if form.validate_on_submit():
         title = form.title.data
         description = form.description.data
-        poster = form.poster.data
-         
-        filename = secure_filename(poster.filename)
-        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-         
-        new_movie = MovieForm(title=title, description=description, poster=filename)
-         
-        db.session.add(new_movie)
+        poster_img = form.poster.data
+        
+        filename = secure_filename(poster_img.filename)
+        
+        result = jsonify({"message":"Movie Successfully added",
+                    "title":form.title.data,
+                    "poster": filename,
+                    "description":form.description.data}) 
+        
+        poster_img.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        db.session.add(Movie(title, description, filename))
         db.session.commit()
-         
-         
-        info = {
-            "message" : "Movie Successfully added",
-            "title" : title,
-            "poster": filename,
-            "description": description
-           
-        }
-         
-        return jsonify(info), 201
-    else:
-        errors = form_errors(form)
-        return jsonify({"errors": errors}), 400
+        
+        return result
+    else: 
+        e = form_errors(form)
+        if(e):
+            elst = {"errors": []}
+            elst['errors'] = e
+            result = jsonify(elst)
+        return result
+
+@app.route('/api/v1/movies', methods=['GET'])
+def add_movies():
+    if request.method == 'GET':
+        movies = Movie.query.all()
+        data = []
+        for movie in movies:
+            data.append({
+                "id": movie.id,
+                "title": movie.title,
+                "description": movie.description,
+                "poster": url_for('get_posterimg', filename = movie.poster)
+            })
+    return jsonify(mov = data)
+
+@app.route('/api/v1/posters/<filename>')
+def get_posterimg(filename):
+    return send_from_directory(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER']), filename)
+    
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
 
 ###
 # The functions below should be applicable to all Flask apps.

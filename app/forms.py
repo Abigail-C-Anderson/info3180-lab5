@@ -1,10 +1,11 @@
 # Add any form classes for Flask-WTF here
+
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import TextAreaField, StringField
+from wtforms import StringField, TextAreaField
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import InputRequired
- 
+
 class MovieForm(FlaskForm):
-    title = StringField('Title', validators=[InputRequired()])
-    description = TextAreaField('Description', validators=[InputRequired()])
-    poster = FileField('Poster', validators=[ FileRequired(),FileAllowed(['jpg', 'jpeg', 'png'])])
+    title = StringField('title', validators=[InputRequired()])
+    description = TextAreaField('description', validators=[InputRequired()])
+    poster = FileField('poster', validators=[FileRequired(), FileAllowed(['jpg', 'png'])])
